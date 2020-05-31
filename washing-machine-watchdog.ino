@@ -14,7 +14,11 @@
 
 #include <WiFiClient.h>
 
+#include "PersonalData.hpp"
+
 ESP8266WiFiMulti WiFiMulti;
+
+String urlencode(String msg);
 
 void setup() {
 
@@ -32,7 +36,7 @@ void setup() {
   }
 
   WiFi.mode(WIFI_STA);
-  WiFiMulti.addAP("SSID", "PASSWORD");
+  WiFiMulti.addAP("The Promised LAN", "Tristanisgreat");
 
 }
 
@@ -45,10 +49,59 @@ void loop() {
     HTTPClient http;
 
     Serial.print("[HTTP] begin...\n");
+    String phoneNumber = String(TARGET_PHONE);
+    String textbeltAPIKey = String(TEXTBELT_API_KEY);
+    textbeltAPIKey = "textbelt_test";
+    String message = String("Your washing is done.");
+#if 0
+    String url = String("http://textbelt.com/text");
+    String postPayload = String("phone=") + phoneNumber
+                + "&message=" + urlencode(message)
+                + "&key=" + textbeltAPIKey;
+    Serial.println(url);
+    Serial.println(postPayload);
+#endif
+#if 0
+    String url = String("http://textbelt.com/text?");
+    url += String("phone=") + phoneNumber
+                + "&message=" + urlencode(message)
+                + "&key=" + textbeltAPIKey;
+    Serial.println(url);
+    String postPayload = "";
+    Serial.println(postPayload);
+
+#endif
+#if 1
+    String url = String("http://textbelt.com/text");
+    String postPayload = "{\"phone\":\"" + phoneNumber + "\","
+                        + "\"message\": \"" + message +"\","
+                        + "\"key\": \"" + textbeltAPIKey + "\"}"; 
+    Serial.println(postPayload);
+#endif
+    if (http.begin(client, url)) {  // HTTP
+      int httpCode = http.POST(postPayload);
+      
+      //if the code is negative, there was an error.
+      if (httpCode > 0)
+      {
+        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+
+        // file found at server
+        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+          String payload = http.getString();
+          Serial.println(payload);
+        }
+      } else {
+        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+      }
+        
+    }
+    
+#if 0
     if (http.begin(client, "http://jigsaw.w3.org/HTTP/connection.html")) {  // HTTP
 
 
-      Serial.print("[HTTP] GET...\n");
+      Serial.print("[HTTP] POST...\n");
       // start connection and send HTTP header
       int httpCode = http.GET();
 
@@ -68,9 +121,34 @@ void loop() {
 
       http.end();
     } else {
-      Serial.printf("[HTTP} Unable to connect\n");
+      Serial.printf("[HTTP] Unable to connect\n");
     }
+#endif
   }
 
   delay(10000);
+  while (true)
+  {
+    delay(10000);
+    Serial.println("That's all, folks!");
+  }
+}
+
+String urlencode(String msg)
+{
+  String output;
+  int len = msg.length();
+  for (int i = 0; i < len; ++i)
+  {
+    //TODO: This only handles spaces right now. There is a whole lot more that could go wrong.
+    if (msg[i] == ' ')
+    {
+      output += "%20";
+    }
+    else
+    {
+      output += msg[i];
+    }
+  }
+  return output;
 }
