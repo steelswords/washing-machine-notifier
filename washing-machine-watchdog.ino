@@ -14,6 +14,7 @@
 
 #include <WiFiClient.h>
 
+//The following defines my API key, phone number, and Wifi creds.
 #include "PersonalData.hpp"
 
 ESP8266WiFiMulti WiFiMulti;
@@ -21,7 +22,6 @@ ESP8266WiFiMulti WiFiMulti;
 String urlencode(String msg);
 
 void setup() {
-
   Serial.begin(115200);
   // Serial.setDebugOutput(true);
 
@@ -29,14 +29,21 @@ void setup() {
   Serial.println();
   Serial.println();
 
+  WiFi.mode(WIFI_STA);
+  WiFiMulti.addAP(WIFI_SSID, WIFI_PSK);
+
   for (uint8_t t = 4; t > 0; t--) {
     Serial.printf("[SETUP] WAIT %d...\n", t);
     Serial.flush();
     delay(1000);
   }
 
-  WiFi.mode(WIFI_STA);
-  WiFiMulti.addAP("The Promised LAN", "Tristanisgreat");
+
+  while (WiFiMulti.run() != WL_CONNECTED)
+  {
+    delay(200);
+  }
+  Serial.println("Connected to network.");
 
 }
 
@@ -51,79 +58,47 @@ void loop() {
     Serial.print("[HTTP] begin...\n");
     String phoneNumber = String(TARGET_PHONE);
     String textbeltAPIKey = String(TEXTBELT_API_KEY);
-    textbeltAPIKey = "textbelt_test";
     String message = String("Your washing is done.");
-#if 0
-    String url = String("http://textbelt.com/text");
-    String postPayload = String("phone=") + phoneNumber
-                + "&message=" + urlencode(message)
-                + "&key=" + textbeltAPIKey;
-    Serial.println(url);
-    Serial.println(postPayload);
-#endif
-#if 0
-    String url = String("http://textbelt.com/text?");
-    url += String("phone=") + phoneNumber
-                + "&message=" + urlencode(message)
-                + "&key=" + textbeltAPIKey;
-    Serial.println(url);
-    String postPayload = "";
-    Serial.println(postPayload);
 
-#endif
-#if 1
-    String url = String("http://textbelt.com/text");
-    String postPayload = "{\"phone\":\"" + phoneNumber + "\","
-                        + "\"message\": \"" + message +"\","
-                        + "\"key\": \"" + textbeltAPIKey + "\"}"; 
-    Serial.println(postPayload);
-#endif
-    if (http.begin(client, url)) {  // HTTP
-      int httpCode = http.POST(postPayload);
-      
-      //if the code is negative, there was an error.
-      if (httpCode > 0)
+    //Connect the client
+    int clientConnectStatus = client.connect("textbelt.com", 80);
+    if (!clientConnectStatus)
+    {
+      Serial.println("Connection Failed");
+    }
+    String data = String("phone=") + phoneNumber
+                  + "&message=" + urlencode(message)
+                  + "&key=" + textbeltAPIKey;
+    String payload = String("POST /text/ HTTP/1.1\r\n");
+    payload += String("Host: textbelt.com\r\n")
+          + "User-Agent: ESP8266/1.0\r\n"
+          + "Accept: */*\r\n"
+          + "Content-Length: " + String(data.length()) + "\r\n"
+          + "Content-Type: application/x-www-form-urlencoded\r\n"
+          + "\r\n"
+          + data + "\r\n";
+
+    Serial.println("Payload:\n" + payload);
+    Serial.println("\n---------\nSending payload");
+    client.print(payload);
+    Serial.print("Waiting for client to send...");
+    int loopBreaker = 0;
+    while (!client.available())
+    {
+      delay(10);
+      Serial.print(".");
+      if (++loopBreaker > 130) break;
+    }
+
+    while(client.available() || client.connected())
+    {
+      if (client.available())
       {
-        Serial.printf("[HTTP] POST... code: %d\n", httpCode);
-
-        // file found at server
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-          String payload = http.getString();
-          Serial.println(payload);
-        }
-      } else {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        String line = client.readStringUntil('\n');
+        Serial.println(line);
       }
-        
     }
-    
-#if 0
-    if (http.begin(client, "http://jigsaw.w3.org/HTTP/connection.html")) {  // HTTP
 
-
-      Serial.print("[HTTP] POST...\n");
-      // start connection and send HTTP header
-      int httpCode = http.GET();
-
-      // httpCode will be negative on error
-      if (httpCode > 0) {
-        // HTTP header has been send and Server response header has been handled
-        Serial.printf("[HTTP] GET... code: %d\n", httpCode);
-
-        // file found at server
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
-          String payload = http.getString();
-          Serial.println(payload);
-        }
-      } else {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-      }
-
-      http.end();
-    } else {
-      Serial.printf("[HTTP] Unable to connect\n");
-    }
-#endif
   }
 
   delay(10000);
