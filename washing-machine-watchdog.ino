@@ -15,20 +15,18 @@
 #include <WiFiClient.h>
 
 #include "Texter.hpp"
+#include "AccelerometerWatchdog.hpp"
 
 //The following defines my API key, phone number, and Wifi creds.
 #include "PersonalData.hpp"
 
 ESP8266WiFiMulti WiFiMulti;
 Texter texter(TEXTBELT_API_KEY, TARGET_PHONE);
+AccelerometerWatchdog watchdog(A0, 3*60*1000, &texter);
 
 void setup() {
   Serial.begin(115200);
   // Serial.setDebugOutput(true);
-
-  Serial.println();
-  Serial.println();
-  Serial.println();
 
   WiFi.mode(WIFI_STA);
   WiFiMulti.addAP(WIFI_SSID, WIFI_PSK);
@@ -47,8 +45,11 @@ void setup() {
   }
   Serial.println("Connected to network.");
 
-  texter.text("Your washing is done.");
+  pinMode(13, OUTPUT);
+  digitalWrite(13, HIGH);
+  //texter.text("Your washing is done.");
 
+  watchdog.watch();
 }
 
 void loop() {
