@@ -6,21 +6,23 @@
 class AccelerometerWatchdog
 {
 public:
-  AccelerometerWatchdog(int zPin, int maxCalmTime, Texter* texter)
-    : m_zPin(zPin),
-      m_maxCalmTime(maxCalmTime),
+  AccelerometerWatchdog(int accelPin, unsigned long calmTime_ms, Texter* texter)
+    : m_accelPin(accelPin),
+      m_calmTime_ms(calmTime_ms),
       m_texter(texter)
   {
-    pinMode(zPin, INPUT);
+    pinMode(accelPin, INPUT);
   }
 
+  // Returns when accelerometer is calm for m_calmTime_s
   void watch();
 
-  int m_zPin;
-  int m_maxCalmTime;
+  unsigned long m_calmTime_ms;
+  int m_accelPin = A0;
+
   Texter* m_texter;
 
-  int m_deltaThreshold = 5;
-  int m_centerLevel = 403;
-  int m_delayTime = 100;
+  int m_deltaThreshold = 15;
+  int m_centerLevel = 490;
+  //int m_delayTime = 100;
 };
